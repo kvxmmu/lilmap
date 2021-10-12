@@ -1,100 +1,41 @@
 //
-// Created by nero on 10/9/21.
+// Created by nero on 12.10.2021.
 //
 
 #include "lilmap.h"
 
-// grow & rehash
-void lilmap_grow(LILMap *map, size_t power) {
-    size_t before = map->buckets_allocated;
+void lilmap_init(LILMap *map, size_t capacity,
+                 lilmap_float load_factor) {
+    map->buckets.buckets = calloc(sizeof(struct LILMapBucket),
+            capacity);
+    map->buckets.buckets_allocated = capacity;
+    map->buckets.buckets_count = 0;
 
-    map->buckets_allocated <<= power;
-    map->buckets = realloc(map->buckets,
-                           sizeof(struct LILMapBucket)*map->buckets_allocated);
-
-    void *last_allocated_ptr = &map->buckets[before];
-    size_t last_allocated_count = map->buckets_allocated - before;
-    memset(last_allocated_ptr, 0, last_allocated_count * sizeof(struct LILMapBucket));
+    map->load_factor = load_factor;
 }
 
 void lilmap_set(LILMap *map, lilmap_int key,
-                void *value) {
-    if (lilmap_calc_load_factor(map, 1.f) >= map->load_factor) {
-        lilmap_grow(map, 1u);
-    }
+                void *data) {
+    size_t index = lilmap_to_limited_space(map->buckets.buckets_allocated,
+                                           key);
+    while (index < (map->buckets.buckets_allocated - 1u)) {
+        struct LILMapBucket *bucket = &map->buckets.buckets[index++];
+        if (bucket->value == LILMAP_DEAD) {
+            bucket->key = key;
+            bucket->value = data;
 
-    size_t index = lilmap_get_index(map, key);
-    if (unlikely(index == map->buckets_allocated)) {
-        --index;
-    }
-
-    struct LILMapBucket *bucket = &map->buckets[index];
-
-    if (unlikely(bucket->is_used)) {
-        struct LILMapBucket *new_bucket = malloc(sizeof(struct LILMapBucket));
-        new_bucket->is_used = 1;
-        new_bucket->data = value;
-        new_bucket->key = key;
-
-        lilmap_add_bucket(bucket, new_bucket);
-        return;
-    }
-
-    ++map->buckets_used;
-    bucket->key = key;
-    bucket->is_used = 1;
-    bucket->next = NULL;
-    bucket->data = value;
-}
-
-bool lilmap_lookup(LILMap *map, lilmap_int key,
-                   void **value) {
-    size_t index = lilmap_get_index(map, key);
-    struct LILMapBucket *bucket = &map->buckets[index];
-
-    if (likely(bucket->is_used)) {
-
-        struct LILMapBucket *cur_bucket = bucket;
-        do {
-            if (cur_bucket->key == key) {
-                *value = cur_bucket->data;
-                return true;
-            }
-
-            cur_bucket = cur_bucket->next;
-        } while (cur_bucket != NULL);
-
-    }
-
-    return false;
-}
-
-void lilmap_init(LILMap *map, lilmap_float load_factor) {
-    map->load_factor = load_factor;
-    map->buckets = calloc(sizeof(struct LILMapBucket),
-                          DEFAULT_BUCKETS_COUNT);
-
-    map->buckets_used = 0;
-    map->buckets_allocated = DEFAULT_BUCKETS_COUNT;
-}
-
-void lilmap_free(LILMap *map) {
-    for (size_t pos = 0; pos < map->buckets_allocated; ++pos) {
-        struct LILMapBucket *bucket = &map->buckets[pos];
-        if (!bucket->is_used) continue;
-
-        struct LILMapBucket *victim = bucket->next;
-
-        while (victim != NULL) {
-            struct LILMapBucket *new_victim = victim->next;
-            free(victim);
-
-            victim = new_victim;
+            return;
         }
     }
-
-    free(map->buckets);
-    map->buckets_allocated = 0;
-    map->buckets_used = 0;
-    map->load_factor = 0.f;
 }
+
+void lilmap_resize(LILMap *map, size_t new_capacity) {
+    LILMap new_map;
+    new_map.buckets.buckets_count = 0;
+    new_map.buckets.buckets_allocated = new_capacity;
+    new_map.buckets.buckets = calloc(sizeof(struct LILMapBucket),
+                                     new_capacity);
+
+
+}
+

@@ -1,8 +1,10 @@
 # LILMap
-usable out of box HashMap
+Specific hashmap that works fine with monotonic integer values starting from zero.
 
 # TODO
 
-- Rehash
+- Optimize division with bitwise operations
 
 # API Doc
+
+
