@@ -1,82 +1,72 @@
 //
-// Created by nero on 12.10.2021.
+// Created by nero on 13.10.2021.
 //
 
-#ifndef LILMAP_LILMAP_H
-#define LILMAP_LILMAP_H
+#ifndef LILMAP2_LILMAP_H
+#define LILMAP2_LILMAP_H
 
-#include <inttypes.h>
 #include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
+#include <inttypes.h>
 #include <stddef.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
-#define LILMAP_DEAD ((void*)0x0)
-#define LILMAP_MAX_ITER (64)
-#define LILMAP_LOAD_FACTOR (0.75f)
 
+#define LM_DEFAULT_CAPACITY 1
+#define LM_DEFAULT_LOAD_FACTOR 0.75f
+
+#define LM_MAX_PROBES 64u
+
+typedef float lilmap_float;
 typedef size_t lilmap_int;
-typedef float  lilmap_float;
 
-struct LILMapBucket;
-struct LILMapBucket {
+struct LilMapBucket {
     lilmap_int key;
     void *value;
 };
 
 typedef struct {
-    struct LILMapBucket *buckets;
+    struct LilMapBucket *buckets;
 
     size_t buckets_allocated;
-    size_t buckets_count;
-} Buckets;
-
-typedef struct LILMap {
-    Buckets buckets;
+    size_t buckets_used;
 
     lilmap_float load_factor;
-} LILMap;
-
-//
-
-void lilmap_init(LILMap *map, size_t capacity,
-                 lilmap_float load_factor);
-void lilmap_resize(LILMap *map, size_t new_capacity);
-
-void lilmap_set(LILMap *map, lilmap_int key,
-                void *data);
-void *lilmap_get(LILMap *map, lilmap_int key);
+} LilMap;
 
 
-static inline
-size_t lilmap_to_limited_space(size_t buckets_allocated,
-                               size_t hash) {
-    return (buckets_allocated % hash) - (hash == buckets_allocated);
+void lilmap_init_custom(LilMap *map, size_t capacity,
+                        lilmap_float load_factor);
+
+void lilmap_set(LilMap *map, lilmap_int key,
+                void *value);
+void* lilmap_lookup(LilMap *map, lilmap_int key);
+
+void lilmap_grow(LilMap *map, lilmap_int key,
+                 void *value);
+
+inline static
+size_t lilmap_index(LilMap *map, lilmap_int key) {
+    size_t index = key % map->buckets_allocated;
+
+    return index - (index == map->buckets_allocated);
 }
 
-inline
-size_t lilmap_size(LILMap *map) {
-    return map->buckets.buckets_count;
+inline static
+lilmap_float lilmap_load_factor(LilMap *map, size_t additional) {
+    return ((lilmap_float)(map->buckets_used + additional)) / ((lilmap_float)map->buckets_allocated);
 }
 
-inline
-size_t lilmap_empty(LILMap *map) {
-    return lilmap_size(map) == 0;
+inline static
+void lilmap_init(LilMap *map) {
+    lilmap_init_custom(map, LM_DEFAULT_CAPACITY,
+                       LM_DEFAULT_LOAD_FACTOR);
 }
 
-inline
-lilmap_float lilmap_calculate_load_factor(Buckets *buckets) {
-    return ((lilmap_float)buckets->buckets_count) / ((lilmap_float)buckets->buckets_allocated);
+inline static
+void lilmap_free(LilMap *map) {
+    free(map->buckets);
 }
 
-static
-size_t lilmap_mix(lilmap_int key) {
-    key ^= key << 13u;
-    key ^= key >> 12u;
 
-    return key;
-}
-
-//
-
-#endif //LILMAP_LILMAP_H
+#endif //LILMAP2_LILMAP_H
