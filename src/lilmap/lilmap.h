@@ -11,11 +11,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-
+#define LM_TOMBSTONE ((void *)0xDEAD)
 #define LM_DEFAULT_CAPACITY 1
 #define LM_DEFAULT_LOAD_FACTOR 0.75f
 
-#define LM_MAX_PROBES 64u
+#define LM_MAX_PROBES 128u
 
 typedef float lilmap_float;
 typedef size_t lilmap_int;
@@ -41,6 +41,7 @@ void lilmap_init_custom(LilMap *map, size_t capacity,
 void lilmap_set(LilMap *map, lilmap_int key,
                 void *value);
 void* lilmap_lookup(LilMap *map, lilmap_int key);
+void lilmap_erase(LilMap *map, lilmap_int key);
 
 void lilmap_grow(LilMap *map, lilmap_int key,
                  void *value);
@@ -61,6 +62,11 @@ inline static
 void lilmap_init(LilMap *map) {
     lilmap_init_custom(map, LM_DEFAULT_CAPACITY,
                        LM_DEFAULT_LOAD_FACTOR);
+}
+
+inline static
+bool lilmap_is_occupied(struct LilMapBucket *bucket) {
+    return (bucket->value != NULL) && (bucket->value != LM_TOMBSTONE);
 }
 
 inline static

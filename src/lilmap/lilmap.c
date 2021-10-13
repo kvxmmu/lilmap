@@ -25,7 +25,7 @@ void lilmap_set(LilMap *map, lilmap_int key,
 
     while (index < map->buckets_allocated) {
         struct LilMapBucket *bucket = &map->buckets[index++];
-        if ((bucket->value == NULL) || (bucket->key == key)) {
+        if (!lilmap_is_occupied(bucket) || (bucket->key == key)) {
             bucket->value = value;
             bucket->key = key;
             ++map->buckets_used;
@@ -43,10 +43,23 @@ void* lilmap_lookup(LilMap *map, lilmap_int key) {
 
     for (size_t pos = index; ((pos - index) < LM_MAX_PROBES) || (pos < map->buckets_allocated); ++pos) {
         struct LilMapBucket *bucket = &map->buckets[pos];
-        if (bucket->value && (bucket->key == key)) { return bucket->value; }
+        if (lilmap_is_occupied(bucket) && (bucket->key == key)) { return bucket->value; }
     }
 
     return NULL;
+}
+
+void lilmap_erase(LilMap *map, lilmap_int key) {
+    size_t index = lilmap_index(map, key);
+    for (size_t pos = index; ((pos - index) < LM_MAX_PROBES) || (pos < map->buckets_allocated); ++pos) {
+        struct LilMapBucket *bucket = &map->buckets[pos];
+        if (bucket->key == key) {
+            bucket->value = LM_TOMBSTONE;
+            --map->buckets_used;
+
+            break;
+        }
+    }
 }
 
 void lilmap_grow(LilMap *map, lilmap_int key,
@@ -57,7 +70,7 @@ void lilmap_grow(LilMap *map, lilmap_int key,
 
     for (size_t pos = 0; pos < map->buckets_allocated; ++pos) {
         struct LilMapBucket *bucket = &map->buckets[pos];
-        if (bucket->value == NULL) { continue; }
+        if (!lilmap_is_occupied(bucket)) { continue; }
 
         lilmap_set(&new_map, bucket->key,
                    bucket->value);

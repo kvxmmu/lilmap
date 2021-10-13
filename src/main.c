@@ -15,8 +15,9 @@ int main() {
     void *ptr1, *ptr2;
     ptr1 = lilmap_lookup(&map, key1);
     ptr2 = lilmap_lookup(&map, key2);
+    lilmap_erase(&map, key1);
 
-    int *i1 = ptr1, *i2 = ptr2;
+    int *i1 = ptr1, *i2 = ptr2, *i3 = lilmap_lookup(&map, key1);
 
     lilmap_free(&map);
 
