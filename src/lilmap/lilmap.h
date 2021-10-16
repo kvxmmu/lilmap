@@ -11,11 +11,20 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#ifdef GNU_EXTENSIONS
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+#define likely(x)   (x)
+#define unlikely(x) (!!(x))
+#endif
+
 #define LM_TOMBSTONE ((void *)0xDEAD)
 #define LM_DEFAULT_CAPACITY 64
 #define LM_DEFAULT_LOAD_FACTOR 0.75f
 
 #define LM_MAX_PROBES 128u
+#define LM_USE_BIT_HASH
 
 typedef float lilmap_float;
 typedef size_t lilmap_int;
@@ -55,8 +64,15 @@ void lilmap_grow(LilMap *map, lilmap_int key,
 /* Get bucket index from map */
 inline static
 size_t lilmap_index(LilMap *map, lilmap_int key) {
+#ifndef LM_USE_BIT_HASH
     size_t index = key % map->buckets_allocated;
+#else
+    // mix bits to make result more random
+    key ^= key >> 11u;
+    key ^= key << 15u;
 
+    size_t index = key & (map->buckets_allocated - 1);
+#endif
     return index - (index == map->buckets_allocated);
 }
 
