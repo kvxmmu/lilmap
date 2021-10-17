@@ -23,7 +23,7 @@
 #define LM_DEFAULT_CAPACITY 64
 #define LM_DEFAULT_LOAD_FACTOR 0.75f
 
-#define LM_MAX_PROBES 128u
+#define LM_MAX_PROBES 16u
 #define LM_USE_BIT_HASH
 
 typedef float lilmap_float;
